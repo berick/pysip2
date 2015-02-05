@@ -1,0 +1,17 @@
+= Python3 SIP2 Client Library
+
+== Running Example Code
+
+[source,sh]
+------------------------------------------------------------------
+cp pysip2-client.ini.example pysip2-client.ini
+------------------------------------------------------------------
+
+ * Modify the [client] section of pysip2-client.ini to point it
+   at your SIP2 server.
+
+[source,sh]
+------------------------------------------------------------------
+PYTHONPATH=src example/sc-status.py
+# ...
+------------------------------------------------------------------
