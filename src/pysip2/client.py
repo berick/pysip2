@@ -20,66 +20,13 @@ from pysip2.spec import FixedFieldSpec as ffspec
 from pysip2.spec import TEXT_ENCODING, LINE_TERMINATOR, SOCKET_BUFSIZE
 from pysip2.message import Message, FixedField, Field
 
-'''
-Tracks timing information for client requests
-'''
-class ClientLog(object):
-
-    class ClientMessage(object):
-        def __init__(self, spec, start_time):
-            self.spec = spec
-            self.start_time = start_time
-            self.end_time = 0
-            self.duration = 0
-
-        def __str__(self):
-            return _('{0:.3f} {1} {2}').format(
-                self.duration, self.spec.label, self.spec.code)
-
-    def __init__(self):
-        self.messages = []
-        self.current_msg = None
-
-    def start_msg(self, spec):
-        self.current_msg = ClientLog.ClientMessage(spec, time.time())
-
-    def finish_msg(self):
-        self.current_msg.end_time = time.time()
-        self.current_msg.duration = \
-            self.current_msg.end_time - self.current_msg.start_time
-        self.messages.append(self.current_msg)
-        self.current_msg = None
-
-    def log_summary(self):
-
-        if len(self.messages) == 0:
-            logging.info(_('No messages collected'))
-            return
-
-        total_duration = 0
-        for msg in self.messages:
-            total_duration = total_duration + msg.duration
-
-        avg_duration = total_duration / len(self.messages)
-        logging.info(_('Total request time {0:.3f}').format(total_duration))
-        logging.info(_('Average request time {0:.3f}').format(avg_duration))
-
-    def log_messages(self):
-
-        if len(self.messages) == 0:
-            logging.info(_('No messages collected'))
-            return
-
-        for msg in self.messages:
-            logging.info(str(msg))
-
-        self.log_summary()
-
-# used for SIP2-level errors
-class ClientError(Exception):
+class ProtocolError(Exception):
+    ''' Invalid messages fields, header values, etc '''
     pass
 
 class Client(object):
+    ''' SIP2 client connection '''
+
     LINE_TERMINATOR_LEN = len(LINE_TERMINATOR)
 
     def __init__(self, server, port):
@@ -89,35 +36,39 @@ class Client(object):
         self.default_institution = None # optional default institution
         self.terminal_pwd = None # optional terminal password
         self.client_log = ClientLog()
-        self.msg_start_time = None
 
-    # may raise socket.error
     def connect(self):
+        ''' Connects to the SIP2 server '''
         logging.debug(
             'connecting to server %s:%s' % (self.server, self.port))
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((self.server, self.port))
 
     def disconnect(self):
+        ''' Disconnects from the SIP2 server '''
         logging.debug(
             'disconnecting from server %s:%s' % (self.server, self.port))
         self.sock.close()
 
     def log_summary(self):
+        ''' Log message summary statistics '''
         self.client_log.log_summary()
 
     def log_messages(self):
+        ''' Log all messages and summary statistics '''
         self.client_log.log_messages()
 
     def send_msg(self, msg):
+        ''' Sends a Message to the server '''
         msg_txt = str(msg)
         logging.debug('sending message: %s' % msg_txt)
         self.client_log.start_msg(msg.spec)
         self.sock.send(bytes(msg_txt + LINE_TERMINATOR, TEXT_ENCODING))
 
     def recv_msg(self):
-        msg_txt = ''
+        ''' Receives a Message from the server '''
 
+        msg_txt = ''
         while True:
 
             buf = self.sock.recv(SOCKET_BUFSIZE)
@@ -141,14 +92,14 @@ class Client(object):
         return Message(msg_txt = msg_txt)
 
 
-    '''
-    kwargs
-        - status_code
-        - max_print_width
-        - protocol_version
-    '''
     def sc_status(self, **kwargs):
+        ''' Send a "SC Status" request to the server.
 
+        kwargs
+            - status_code
+            - max_print_width
+            - protocol_version
+        '''
         logging.debug("sending sc status")
 
         msg = Message(
@@ -170,13 +121,12 @@ class Client(object):
         return self.recv_msg()
 
 
-    '''
-    Login to SIP2 server
-
-    Returns True on success, False on login failure,
-    raises socket exception on communcation failures.
-    '''
     def login(self, username, password, location):
+        ''' Login to SIP2 server.
+
+        Returns True on success, False on login failure,
+        Raises socket exception on communcation failures.
+        '''
 
         logging.debug(
             "logging in with username %s @ location %s" % (
@@ -207,11 +157,13 @@ class Client(object):
         return False
 
 
-    '''
-    kwargs 
-        - institution
-    '''
     def item_info_request(self, item_id, **kwargs):
+        ''' Sends an Item Information Request message
+
+        kwargs
+            - institution 
+                -- required if default_institution is unset
+        '''
 
         logging.debug("item_info_request() for %s" % item_id)
 
@@ -231,12 +183,14 @@ class Client(object):
         self.send_msg(msg)
         return self.recv_msg()
 
-    '''
-    kwargs
-        - institution
-        - patron_pwd
-    '''
     def patron_status_request(self, patron_id, **kwargs):
+        ''' Sends a Patron Status Request message.
+
+        optional kwargs
+            - institution 
+                -- required if default_institution is unset
+            - patron_pwd
+        '''
 
         logging.debug("patron_status_request() for %s" % patron_id)
 
@@ -258,22 +212,25 @@ class Client(object):
         self.send_msg(msg)
         return self.recv_msg()
 
-    '''
-    kwargs
-        - institution
-        - summary
-        - patron_pwd
-        - start_item
-        - end_item
-    '''
     def patron_info_request(self, patron_id, **kwargs):
+        ''' Send a Patron Information Request message.
+
+        optional kwargs
+            - institution 
+                -- required if default_institution is unset
+            - summary
+                -- determines what detailed information to request, if any
+            - patron_pwd
+            - start_item
+            - end_item
+        '''
 
         logging.debug("patron_information_request() for %s" % patron_id)
 
         # summary may contain up to 1 "Y" value.
         summary = kwargs.get('summary', '          ')
         if summary.count('Y') > 1:
-            raise ClientError(
+            raise ProtocolError(
                 'Too many summary values requested in patron info request')
 
         msg = Message(
@@ -297,17 +254,19 @@ class Client(object):
         self.send_msg(msg)
         return self.recv_msg()
 
-    '''
-    kwargs
-        - institution
-        - sc_renewal_policy
-        - no_block
-        - nb_due_date
-        - item_properties
-        - fee acknowledged
-        - cancel
-    '''
     def checkout_request(self, item_id, patron_id, **kwargs):
+        ''' Send a Checkout message.
+
+        kwargs
+            - institution
+                -- required if default_institution is unset
+            - sc_renewal_policy
+            - no_block
+            - nb_due_date
+            - item_properties
+            - fee acknowledged
+            - cancel
+        '''
 
         logging.debug(
             "checkout_request() for patron=%s and item=%s" % (
@@ -348,15 +307,17 @@ class Client(object):
         self.send_msg(msg)
         return self.recv_msg()
 
-    '''
-    kwargs
-        - institution
-        - no_block
-        - return_date
-        - item_properties
-        - cancel
-    '''
     def checkin_request(self, item_id, current_location, **kwargs):
+        ''' Send a Checkin message.
+
+        kwargs
+            - institution
+                -- required if default_institution is unset
+            - no_block
+            - return_date
+            - item_properties
+            - cancel
+        '''
 
         logging.debug(
             "checkin_request() for item %s" % (item_id))
@@ -389,3 +350,63 @@ class Client(object):
         self.send_msg(msg)
         return self.recv_msg()
 
+
+class ClientLog(object):
+    '''
+    Collect round-trip timing information for client requests.
+    '''
+
+    class ClientMessage(object):
+        '''
+        Models a single round-trip message
+        '''
+        def __init__(self, spec, start_time):
+            self.spec = spec
+            self.start_time = start_time
+            self.end_time = 0
+            self.duration = 0
+
+        def __str__(self):
+            return _('duration: {0:.3f} [{1}] {2}').format(
+                self.duration, self.spec.code, self.spec.label)
+
+    def __init__(self):
+        self.messages = []
+        self.current_msg = None
+
+    def start_msg(self, spec):
+        ''' Start tracking a new message '''
+        self.current_msg = ClientLog.ClientMessage(spec, time.time())
+
+    def finish_msg(self):
+        ''' Complete collecting data on the current message '''
+        self.current_msg.end_time = time.time()
+        self.current_msg.duration = \
+            self.current_msg.end_time - self.current_msg.start_time
+        self.messages.append(self.current_msg)
+        self.current_msg = None
+
+    def log_summary(self):
+        ''' Logs summary information on collected messages '''
+
+        if len(self.messages) == 0:
+            logging.info(_('No messages collected'))
+            return
+
+        total_duration = 0
+        for msg in self.messages:
+            total_duration = total_duration + msg.duration
+
+        avg_duration = total_duration / len(self.messages)
+        logging.info(_('Total request time {0:.3f}').format(total_duration))
+        logging.info(_('Average request time {0:.3f}').format(avg_duration))
+
+    def log_messages(self):
+        ''' Logs data on all collected messages '''
+
+        if len(self.messages) == 0:
+            logging.info(_('No messages collected'))
+            return
+
+        for msg in self.messages:
+            logging.info(str(msg))

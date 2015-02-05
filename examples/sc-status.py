@@ -44,4 +44,5 @@ print("offline OK value => " + \
 
 client.disconnect()
 client.log_messages()
+client.log_summary()
 
