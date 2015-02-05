@@ -13,12 +13,67 @@
 # GNU General Public License for more details.
 # -----------------------------------------------------------------------
 import sys, socket, random, time, logging
+from gettext import gettext as _
 from pysip2.spec import MessageSpec as mspec
 from pysip2.spec import FieldSpec as fspec
 from pysip2.spec import FixedFieldSpec as ffspec
 from pysip2.spec import TEXT_ENCODING, LINE_TERMINATOR, SOCKET_BUFSIZE
 from pysip2.message import Message, FixedField, Field
 
+'''
+Tracks timing information for client requests
+'''
+class ClientLog(object):
+
+    class ClientMessage(object):
+        def __init__(self, spec, start_time):
+            self.spec = spec
+            self.start_time = start_time
+            self.end_time = 0
+            self.duration = 0
+
+        def __str__(self):
+            return _('{0:.3f} {1} {2}').format(
+                self.duration, self.spec.label, self.spec.code)
+
+    def __init__(self):
+        self.messages = []
+        self.current_msg = None
+
+    def start_msg(self, spec):
+        self.current_msg = ClientLog.ClientMessage(spec, time.time())
+
+    def finish_msg(self):
+        self.current_msg.end_time = time.time()
+        self.current_msg.duration = \
+            self.current_msg.end_time - self.current_msg.start_time
+        self.messages.append(self.current_msg)
+        self.current_msg = None
+
+    def log_summary(self):
+
+        if len(self.messages) == 0:
+            logging.info(_('No messages collected'))
+            return
+
+        total_duration = 0
+        for msg in self.messages:
+            total_duration = total_duration + msg.duration
+
+        avg_duration = total_duration / len(self.messages)
+        logging.info(_('Total request time {0:.3f}').format(total_duration))
+        logging.info(_('Average request time {0:.3f}').format(avg_duration))
+
+    def log_messages(self):
+
+        if len(self.messages) == 0:
+            logging.info(_('No messages collected'))
+            return
+
+        for msg in self.messages:
+            logging.info(str(msg))
+
+        self.log_summary()
 
 # used for SIP2-level errors
 class ClientError(Exception):
@@ -33,6 +88,8 @@ class Client(object):
         self.sock = None
         self.default_institution = None # optional default institution
         self.terminal_pwd = None # optional terminal password
+        self.client_log = ClientLog()
+        self.msg_start_time = None
 
     # may raise socket.error
     def connect(self):
@@ -46,9 +103,16 @@ class Client(object):
             'disconnecting from server %s:%s' % (self.server, self.port))
         self.sock.close()
 
+    def log_summary(self):
+        self.client_log.log_summary()
+
+    def log_messages(self):
+        self.client_log.log_messages()
+
     def send_msg(self, msg):
         msg_txt = str(msg)
         logging.debug('sending message: %s' % msg_txt)
+        self.client_log.start_msg(msg.spec)
         self.sock.send(bytes(msg_txt + LINE_TERMINATOR, TEXT_ENCODING))
 
     def recv_msg(self):
@@ -71,6 +135,7 @@ class Client(object):
             if msg_txt[-Client.LINE_TERMINATOR_LEN:] == LINE_TERMINATOR:
                 break
 
+        self.client_log.finish_msg()
         logging.debug("received message: " + msg_txt)
 
         return Message(msg_txt = msg_txt)

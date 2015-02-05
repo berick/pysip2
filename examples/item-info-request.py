@@ -45,4 +45,5 @@ print("All Fields:\n" + repr(resp))
 print("title: %s\n" % resp.get_field_by_code('AJ').value)
 
 client.disconnect()
+client.log_messages()
 

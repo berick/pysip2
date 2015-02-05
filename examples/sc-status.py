@@ -43,4 +43,5 @@ print("offline OK value => " + \
     resp.get_fixed_field_by_name('offline_ok').value + "\n")
 
 client.disconnect()
+client.log_messages()
 

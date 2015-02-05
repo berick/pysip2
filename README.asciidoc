@@ -4,7 +4,7 @@
 
 [source,sh]
 ------------------------------------------------------------------
-cp pysip2-client.ini.example pysip2-client.ini
+$ cp pysip2-client.ini.example pysip2-client.ini
 ------------------------------------------------------------------
 
  * Modify the [client] section of pysip2-client.ini to point it
@@ -12,6 +12,18 @@ cp pysip2-client.ini.example pysip2-client.ini
 
 [source,sh]
 ------------------------------------------------------------------
-PYTHONPATH=src example/sc-status.py
+$ PYTHONPATH=src examples/sc-status.py
+$ PYTHONPATH=src examples/item-info-request.py <item_barcode>
+$ PYTHONPATH=src examples/checkout-checkin.py <item_barcode> <patron_barcode>
 # ...
 ------------------------------------------------------------------
+
+== TODO
+
+ * documentation
+ * checksums
+ * fee paid message + response
+ * hold message + response
+ * renew message + response
+ * renew all message + response
+ * other message types

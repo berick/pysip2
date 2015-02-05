@@ -57,4 +57,4 @@ else:
 print("Full Checkin Response:\n" + repr(resp))
 
 client.disconnect()
-
+client.log_messages()
