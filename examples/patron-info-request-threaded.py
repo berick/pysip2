@@ -13,12 +13,8 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 # -----------------------------------------------------------------------
-import sys, logging, logging.config, getopt, configparser
+import sys, logging, logging.config, getopt, configparser, threading, time
 import pysip2.client
-
-'''
-PYTHONPATH=../src/ ./sc-status.py
-'''
 
 logging.config.fileConfig('pysip2-client.ini')
 config = configparser.ConfigParser()
@@ -31,22 +27,29 @@ username = config['client']['username']
 password = config['client']['password']
 location_code = config['client']['location_code']
 
-client = pysip2.client.Client(server, int(port))
-client.default_institution = institution
-client.connect()
-client.login(username, password, location_code)
-resp = client.sc_status()
+class ThreadedClient(threading.Thread):
 
-logging.info('\n'+repr(resp))
+    def __init__(self, barcode):
+        super(ThreadedClient, self).__init__()
+        self.barcode = barcode
 
-logging.info("offline OK value => " + \
-    resp.get_fixed_field_by_name('offline_ok').value)
+    def run(self):
+        client = pysip2.client.Client(server, int(port))
+        client.default_institution = institution
+        client.connect()
+        client.login(username, password, location_code)
 
-# example access fixed fields by position
-ff = resp.fixed_fields[0]
-logging.info('First fixed field: %s => %s' % (ff.spec.label, ff.value))
+        for i in range(10):
+            resp = client.patron_info_request(self.barcode)
+            time.sleep(.02)
 
-client.disconnect()
-client.log_messages()
-client.log_summary()
+        client.disconnect()
+        client.log_messages()
+
+
+thread1 = ThreadedClient(sys.argv[1])
+thread2 = ThreadedClient(sys.argv[2])
+thread1.start()
+time.sleep(1) # give first login a chance to complete
+thread2.start()
 

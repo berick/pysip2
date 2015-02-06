@@ -61,7 +61,7 @@ class Client(object):
     def send_msg(self, msg):
         ''' Sends a Message to the server '''
         msg_txt = str(msg)
-        logging.debug('sending message: %s' % msg_txt)
+        logging.debug('SENDING: %s' % msg_txt)
         self.client_log.start_msg(msg.spec)
         self.sock.send(bytes(msg_txt + LINE_TERMINATOR, TEXT_ENCODING))
 
@@ -87,7 +87,7 @@ class Client(object):
                 break
 
         self.client_log.finish_msg()
-        logging.debug("received message: " + msg_txt)
+        logging.debug("RECEIVED: " + msg_txt)
 
         return Message(msg_txt = msg_txt)
 
