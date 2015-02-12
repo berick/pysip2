@@ -23,7 +23,7 @@ TEXT_ENCODING       = 'UTF-8'
 SIP_DATETIME        = "%Y%m%d    %H%M%S"
 LINE_TERMINATOR     = '\r'
 SOCKET_BUFSIZE      = 4096
-STRING_COLUMN_PAD   = 24
+STRING_COLUMN_PAD   = 30
 
 # -----------------------------------------------------------------
 # Classes for modeling and tracking message and field specifications

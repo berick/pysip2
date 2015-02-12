@@ -47,7 +47,6 @@ class Message(object):
         self.fields = []
         self.fixed_fields = []
         self.msg_txt = ''
-        self.date_txt = ''
 
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -74,15 +73,23 @@ class Message(object):
         return self.msg_txt
 
     def __repr__(self):
-        
-        # TODO: the labels below are not i18n friendly
-        text = "Label%s: %s\nCode%s: %s\n" % (
-            ' '*(STRING_COLUMN_PAD - 5),
-            self.spec.label,
-            ' '*(STRING_COLUMN_PAD - 4),
+
+        # note: this is a less than perfect i18n solution, but
+        # creating fixed width i18n-friendly key/value pairs is hard.
+        label_str = _("Label")
+        code_str = _("Code")
+        label_len = len(label_str)
+        code_len = len(code_str)
+
+        text = _("{0}{1}: {2}\n{3}{4}: {5}\n").format(
+            label_str,
+            ' '*(STRING_COLUMN_PAD - label_len),
+            self.spec.label, 
+            code_str,
+            ' '*(STRING_COLUMN_PAD - code_len),
             self.spec.code
         )
-
+            
         for field in self.fixed_fields:
             text = text + repr(field) + '\n'
 
