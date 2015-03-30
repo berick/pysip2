@@ -17,7 +17,7 @@ import sys, logging, logging.config, getopt, configparser
 import pysip2.client
 
 '''
-PYTHONPATH=../src/ ./checkout-checkin.py <item_barcode> <patron_barcode>
+PYTHONPATH=../src/ ./checkout.py <item_barcode> <patron_barcode>
 '''
 
 logging.config.fileConfig('pysip2-client.ini')
@@ -47,14 +47,4 @@ else:
 
 print("Full Checkout Response:\n" + repr(resp))
 
-resp = client.checkin_request(copy_barcode, location_code)
-
-if resp.get_fixed_field_by_name('ok').value == '1':
-    print(" * Checkin Succeeded")
-else:
-    print(" * Checkin Failed")
-
-print("Full Checkin Response:\n" + repr(resp))
-
 client.disconnect()
-client.log_messages()
