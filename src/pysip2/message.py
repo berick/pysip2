@@ -31,12 +31,17 @@ class Field(object):
         return self.spec.code + self.value + '|'
 
     def __repr__(self):
-        spaces = STRING_COLUMN_PAD - len(self.spec.label)
-        return self.spec.label + ' '*spaces + ': ' + self.value
+        spaces = STRING_COLUMN_PAD - len(self.spec.label) - 5
+        return '[%s] %s' % (self.spec.code, self.spec.label) \
+            + ' '*spaces + ': ' + self.value
 
 class FixedField(Field):
     def __str__(self):
         return self.value
+
+    def __repr__(self):
+        spaces = STRING_COLUMN_PAD - len(self.spec.label)
+        return self.spec.label + ' '*spaces + ': ' + self.value
 
 '''
 Models a complete SIP2 message

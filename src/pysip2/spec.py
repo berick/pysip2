@@ -23,7 +23,7 @@ TEXT_ENCODING       = 'UTF-8'
 SIP_DATETIME        = "%Y%m%d    %H%M%S"
 LINE_TERMINATOR     = '\r'
 SOCKET_BUFSIZE      = 4096
-STRING_COLUMN_PAD   = 30
+STRING_COLUMN_PAD   = 32 # for printing messages in columnar displays
 
 # -----------------------------------------------------------------
 # Classes for modeling and tracking message and field specifications
@@ -53,8 +53,10 @@ class FieldSpec(object):
     def find_by_code(code):
         spec = FieldSpec.registry.get(code)
         if spec is None:
-            logging.warn("No field spec found with code '%s'" % code)
-            return FixedFieldSpec(code, code)
+            # no spec found for the given code.  This can happen when
+            # nonstandard fields are used (which is OK).  Create a new 
+            # spec using the code as the label.
+            return FieldSpec(code, code)
         return spec
 
 class MessageSpec(object):
