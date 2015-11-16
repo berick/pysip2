@@ -19,10 +19,9 @@ from pysip2.spec import FieldSpec as fspec
 from pysip2.spec import FixedFieldSpec as ffspec
 from pysip2.spec import STRING_COLUMN_PAD, SIP_DATETIME, LINE_TERMINATOR
 
-'''
-Models a single SIP2 message field
-'''
 class Field(object):
+    '''Models a single SIP2 message field'''
+
     def __init__(self, spec, value=''):
         self.spec = spec
         self.value = value
@@ -36,6 +35,7 @@ class Field(object):
             + ' '*spaces + ': ' + self.value
 
 class FixedField(Field):
+    '''Models a single SIP2 message fixed field'''
     def __str__(self):
         return self.value
 
@@ -43,10 +43,9 @@ class FixedField(Field):
         spaces = STRING_COLUMN_PAD - len(self.spec.label)
         return self.spec.label + ' '*spaces + ': ' + self.value
 
-'''
-Models a complete SIP2 message
-'''
 class Message(object):
+    '''Models a complete SIP2 message.'''
+
 
     def __init__(self, **kwargs):
         self.fields = []
@@ -59,8 +58,8 @@ class Message(object):
         if self.msg_txt != '':
             self.parse_txt()
 
-    ''' Returns a formatted SIP2 message '''
     def __str__(self):
+        '''Returns a human-readable formatted SIP2 message.'''
 
         if self.msg_txt != '':
             return self.msg_txt
@@ -110,44 +109,40 @@ class Message(object):
         if value is not None:
             self.fields.append(Field(spec, value))
 
-    '''
-    Returns the first Field object with the specified code.
-    Returns None if no such field is found.
-    '''
     def get_field(self, code):
+        '''Returns the first Field object with the specified code.
+
+        Returns None if no such field is found.
+        '''
+
         for field in self.fields:
             if field.spec.code == code:
                 return field
         return None
 
-    '''
-    Returns an array of all Field objects matching the requested code.
-    '''
     def get_fields(self, code):
+        '''Returns an array of all Field objects for the requested code.'''
         return [f for f in self.fields if f.spec.code == code]
 
-    '''
-    Returns the first value found for the specified code.
-    Returns None if no such field is found.
-    This is a convience method which allows access to a field' value 
-    without having to first (manually) confirm the field is present.
-    '''
     def get_field_value(self, code):
+        '''Returns the first value found for the specified code.
+
+        Returns None if no such field is found.  This is a convience
+        method which allows access to a field's value without having to
+        first (manually) confirm the field exists in the message.
+        '''
+
         field = self.get_field(code)
         if field is None: return None
         return field.value
 
-    '''
-    Returns an array of values for the specified field.
-    '''
     def get_field_values(self, code):
+        '''Returns an array of values for the specified field.'''
         fields = self.get_fields(code)
         return [f.value for f in fields]
 
-    '''
-    Returns the FixedField object with the specified name.
-    '''
     def get_fixed_field_by_name(self, name):
+        '''Returns the FixedField object with the specified name.'''
         if hasattr(ffspec, name):
             spec = getattr(ffspec, name)
             return [f for f in self.fixed_fields if f.spec == spec][0]
