@@ -110,12 +110,43 @@ class Message(object):
         if value is not None:
             self.fields.append(Field(spec, value))
 
-    def get_field_by_code(self, code):
+    '''
+    Returns the first Field object with the specified code.
+    Returns None if no such field is found.
+    '''
+    def get_field(self, code):
         for field in self.fields:
             if field.spec.code == code:
                 return field
         return None
 
+    '''
+    Returns an array of all Field objects matching the requested code.
+    '''
+    def get_fields(self, code):
+        return [f for f in self.fields if f.spec.code == code]
+
+    '''
+    Returns the first value found for the specified code.
+    Returns None if no such field is found.
+    This is a convience method which allows access to a field' value 
+    without having to first (manually) confirm the field is present.
+    '''
+    def get_field_value(self, code):
+        field = self.get_field(code)
+        if field is None: return None
+        return field.value
+
+    '''
+    Returns an array of values for the specified field.
+    '''
+    def get_field_values(self, code):
+        fields = self.get_fields(code)
+        return [f.value for f in fields]
+
+    '''
+    Returns the FixedField object with the specified name.
+    '''
     def get_fixed_field_by_name(self, name):
         if hasattr(ffspec, name):
             spec = getattr(ffspec, name)
