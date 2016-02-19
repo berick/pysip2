@@ -73,7 +73,7 @@ class Client(object):
 
             buf = self.sock.recv(SOCKET_BUFSIZE)
 
-            if buf is None or buf == '': # server kicked us off
+            if buf is None or len(buf) == 0: # server kicked us off
                 try:
                     # disconnect if we can
                     self.disconnect()
