@@ -12,7 +12,7 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 # -----------------------------------------------------------------------
-import sys, socket, random, time, logging
+import sys, socket, ssl, random, time, logging
 from gettext import gettext as _
 from pysip2.spec import MessageSpec as mspec
 from pysip2.spec import FieldSpec as fspec
@@ -37,12 +37,44 @@ class Client(object):
         self.terminal_pwd = None # optional terminal password
         self.client_log = ClientLog()
 
+    def ssl_args(self, **kwargs):
+        ''' Enable SSL connections and apply SSL options
+
+        kwargs:
+            enabled : turn on SSL for this connection
+            require_valid_cert : fail on untrusted certificate
+            check_hostname : fail if the certificate hostname does 
+                not match SIP server hostname.
+        '''
+        self.ssl_enabled = kwargs.get('enabled', False)
+        self.ssl_require_valid_cert = kwargs.get('require_valid_cert', True)
+        self.ssl_check_hostname = kwargs.get('check_hostname', True)
+
     def connect(self):
         ''' Connects to the SIP2 server '''
         logging.debug(
             'connecting to server %s:%s' % (self.server, self.port))
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((self.server, self.port))
+
+        if self.ssl_enabled: self.setup_ssl();
+
+    def setup_ssl(self):
+        context = ssl.create_default_context()
+
+        if self.ssl_require_valid_cert:
+            context.verify_mode = ssl.CERT_REQUIRED
+            context.check_hostname = self.ssl_check_hostname
+        else:
+            logging.warn('SSL certificate checks disabled. ' +
+                'This is probably not what you want!')
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
+
+        logging.debug('setting up SSL connection')
+
+        self.sock = context.wrap_socket(
+            self.sock, server_hostname=self.server)
 
     def disconnect(self):
         ''' Disconnects from the SIP2 server '''

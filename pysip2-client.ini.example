@@ -6,6 +6,11 @@ username        = ACS SERVER LOGIN
 password        = ACS SERVER PASSWORD
 location_code   = LOCATION CODE
 
+[ssl]
+enabled=no
+require_valid_cert=yes
+check_hostname=yes
+
 [loggers]
 keys=root
 

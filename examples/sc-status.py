@@ -33,6 +33,13 @@ location_code = config['client']['location_code']
 
 client = pysip2.client.Client(server, int(port))
 client.default_institution = institution
+
+client.ssl_args(
+    enabled = config.getboolean('ssl', 'enabled'),
+    require_valid_cert = config.getboolean('ssl', 'require_valid_cert'),
+    check_hostname = config.getboolean('ssl', 'check_hostname')
+)
+
 client.connect()
 client.login(username, password, location_code)
 resp = client.sc_status()
