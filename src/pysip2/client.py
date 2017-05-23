@@ -33,6 +33,7 @@ class Client(object):
         self.server = server
         self.port = port
         self.sock = None
+        self.ssl_enabled = False 
         self.default_institution = None # optional default institution
         self.terminal_pwd = None # optional terminal password
         self.client_log = ClientLog()
