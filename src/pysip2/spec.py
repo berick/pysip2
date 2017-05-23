@@ -50,6 +50,7 @@ class FieldSpec(object):
     def __str__(self):
         return 'FieldSpec() code=%s label=%s' % (self.code, self.label)
 
+    @staticmethod
     def find_by_code(code):
         spec = FieldSpec.registry.get(code)
         if spec is None:
