@@ -14,7 +14,8 @@ $ cp pysip2-client.ini.example pysip2-client.ini
 ------------------------------------------------------------------
 $ PYTHONPATH=src examples/sc-status.py
 $ PYTHONPATH=src examples/item-info-request.py <item_barcode>
-$ PYTHONPATH=src examples/checkout-checkin.py <item_barcode> <patron_barcode>
+$ PYTHONPATH=src examples/checkout.py <item_barcode> <patron_barcode>
+$ PYTHONPATH=src examples/checkin.py <item_barcode>
 # ...
 ------------------------------------------------------------------
 
