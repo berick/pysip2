@@ -94,11 +94,23 @@ class Message(object):
             self.spec.code
         )
             
+        first = True
         for field in self.fixed_fields:
-            text = text + repr(field) + '\n'
+            if first:
+                first = False
+            else:
+                text = text + '\n'
+            text = text + repr(field)
 
+        # only skip the opening newline if there were no fixed fields
+        # to display
+        first = len(self.fixed_fields) == 0
         for field in self.fields:
-            text = text + repr(field) + '\n'
+            if first:
+                first = False
+            else:
+                text = text + '\n'
+            text = text + repr(field)
 
         return text
 
