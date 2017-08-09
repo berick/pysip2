@@ -94,11 +94,21 @@ class Message(object):
             self.spec.code
         )
             
+        first = True
         for field in self.fixed_fields:
-            text = text + repr(field) + '\n'
+            if first:
+                first = False
+            else:
+                text = text + '\n'
+            text = text + repr(field)
 
+        first = True
         for field in self.fields:
-            text = text + repr(field) + '\n'
+            if first:
+                first = False
+            else:
+                text = text + '\n'
+            text = text + repr(field)
 
         return text
 
