@@ -102,7 +102,9 @@ class Message(object):
                 text = text + '\n'
             text = text + repr(field)
 
-        first = True
+        # only skip the opening newline if there were no fixed fields
+        # to display
+        first = len(self.fixed_fields) == 0
         for field in self.fields:
             if first:
                 first = False
