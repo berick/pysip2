@@ -30,6 +30,13 @@ import pysip2.client
 PS1 = _('sipsh% ')
 PS2 = _('...')
 
+
+# -----------------------------------------------------------------
+# TODO: 
+# - optional parameters
+# - set connection vars via shell
+# -----------------------------------------------------------------
+
 def usage(exit_code=0):
     print(_('''
 
@@ -113,6 +120,11 @@ class CommandRunner(object):
             ]
         )
 
+        self.add_command('checkin', self.checkin,
+            _('Send a Checkin Request (09) message.'), 
+            [{'required' : True, 'label' : _('item-barcode')}]
+        )
+
     def add_command(self, cmd, fn, desc, args=[]):
         self.commands_sorted.append(cmd)
         self.commands[cmd] = {
@@ -142,6 +154,11 @@ class CommandRunner(object):
 
     def connect(self, *args):
         conf = self.config
+
+        if self.client is not None:
+            print(_('Disconnecting...'))
+            self.client.disconnect()
+
         self.client = pysip2.client.Client(conf.server, int(conf.port))
         self.client.default_institution = conf.institution
         #client.ssl_args(...) 
@@ -195,6 +212,11 @@ class CommandRunner(object):
         print(repr(resp))
         return True
 
+    def checkin(self, *args):
+        resp = self.client.checkin_request(args[0], self.config.location_code)
+        print(repr(resp))
+        return True
+
     def run(self, line):
         tokens = shlex.split(line, comments=True)
         command, args = tokens[0], tokens[1:]
@@ -203,8 +225,10 @@ class CommandRunner(object):
             print(_('Command not found: {0}').format(command), file=sys.stderr)
             return
 
-        if command not in ['connect', 'start'] and not self.client:
-            print(_('Command cannot be executed without a SIP server connection.  Try running the "start" command.'))
+        if command not in ['help','echo','connect','start','exit','quit'] \
+            and not self.client:
+            print(_('Command cannot be executed without a SIP server '
+                'connection.  Try running the "start" command.'))
             return
            
         cmd = self.commands[command]
