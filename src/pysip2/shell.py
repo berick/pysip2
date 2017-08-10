@@ -30,6 +30,25 @@ import pysip2.client
 PS1 = _('sipsh% ')
 PS2 = _('...')
 
+def usage(exit_code=0):
+    print(_('''
+
+    -h, --help
+        Display this help message
+
+    -c <file>, --config <file> 
+        Override the default configuration file.  The default file is 
+        'pysip2-client.ini' in the current working directory.
+
+    -a, --autostart
+        Automatically connect, login, and send a status request to the 
+        SIP server using the configuration options in the configuration 
+        .ini file.  Without specifying this option, the user must 
+        manually execute the 'start' command or a combination of
+        'connect', 'login', and 'status'.
+    '''))
+    sys.exit(exit_code)
+
 class Console(object):
     ''' Reads a line of input from stdin and passes it off to 
         CommandRunner for execution. 
@@ -55,18 +74,38 @@ class CommandRunner(object):
         self.client = None
         self.config = config
         self.commands = {}
-        self.add_command('echo', self.echo)
-        self.add_command('exit', self.exit)
-        self.add_command('quit', self.exit)
-        self.add_command('connect', self.connect)
-        self.add_command('login', self.login)
-        self.add_command('status', self.status)
-        self.add_command('start', self.start)
-        self.add_command('patron-info', self.patron_info)
 
-    def add_command(self, cmd, fn):
-        self.commands[cmd] = fn
+        # sorted list of command names lets us display them in
+        # add-order in the help display
+        self.commands_sorted = []
 
+        self.add_command('help', self.help, _('Display help message'))
+        self.add_command('echo', self.echo, _('Echo command with arguments'))
+        self.add_command('exit', self.exit, _('Exit shell'))
+        self.add_command('quit', self.exit, _('Exit shell'))
+        self.add_command('connect', self.connect, 
+            _('Open a network connection to the SIP server.'))
+        self.add_command('login', self.login, _('Send a 93 Login request.'))
+        self.add_command('status', self.status, 
+            _('Send a 99 SC Status request message.'))
+        self.add_command('start', self.start,
+            _('Shortcut for a combination of "connect", "login", and "status" commands.'))
+        self.add_command('patron-info', self.patron_info,
+            _('Send a 63 Patron Information Request message.'))
+
+    def add_command(self, cmd, fn, desc):
+        self.commands_sorted.append(cmd)
+        self.commands[cmd] = {
+            'fn' : fn,
+            'desc': desc
+        }
+
+    def help(self, *args):
+        print(_('Commands:'))
+        for cmd in self.commands_sorted:
+            print(_('  {0} - {1}').format(cmd, self.commands[cmd]['desc']))
+        return True
+        
     def exit(self, *args):
         print(_('Goodbye'))
         sys.exit(0)
@@ -115,6 +154,7 @@ class CommandRunner(object):
                 self.status(*args)
 
     def patron_info(self, *args):
+
         if len(args) == 0:
             print(_('Patron barcode required'))
             return False
@@ -131,21 +171,23 @@ class CommandRunner(object):
             print(_('Command not found: {0}').format(command), file=sys.stderr)
             return
 
-        return self.commands[command](*args)
+        return self.commands[command]['fn'](*args)
 
 class ConfigHandler(object):
     def __init__(self):
+        self.configfile = 'pysip2-client.ini'
         self.server = None
         self.port = None
         self.institution = None
         self.username = None
         self.password = None
+        self.autostart = False
 
-    def setup(self, configfile):
+    def setup(self):
 
-        logging.config.fileConfig(configfile)
+        logging.config.fileConfig(self.configfile)
         config = configparser.ConfigParser()
-        config.read(configfile)
+        config.read(self.configfile)
 
         # prevent stdout debug logs from cluttering the shell.
         # TODO: make it possible to change this from within the shell.
@@ -160,11 +202,38 @@ class ConfigHandler(object):
         self.password = config['client'].get('password', None)
         self.location_code = config['client'].get('location_code', None)
 
+    def read_ops(self):
+
+        try:
+            opts, args = getopt.getopt(
+                sys.argv[1:], 
+                "hac:", 
+                ["help", "autostart", "config="]
+            )
+        except getopt.GetoptError as err:
+            print(str(err), file=sys.stderr)
+            usage(2)
+        for o, a in opts:
+            if o in ('-h', '--help'):
+                usage()
+                pass
+            elif o in ('-a', '--autostart'):
+                self.autostart = True
+            elif o in ('-c', '--config'):
+                self.configfile = a
+            else:
+                print('Uhandled option', file=sys.stderr)
+
 if __name__ == '__main__':
     config = ConfigHandler()
     runner = CommandRunner(config)
     console = Console(runner)
-    config.setup('pysip2-client.ini')
+    config.read_ops()
+    config.setup()
+
+    if config.autostart:
+        runner.start()
+
     console.interact()
 
 
