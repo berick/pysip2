@@ -83,27 +83,54 @@ class CommandRunner(object):
         self.add_command('echo', self.echo, _('Echo command with arguments'))
         self.add_command('exit', self.exit, _('Exit shell'))
         self.add_command('quit', self.exit, _('Exit shell'))
+
         self.add_command('connect', self.connect, 
             _('Open a network connection to the SIP server.'))
-        self.add_command('login', self.login, _('Send a 93 Login request.'))
-        self.add_command('status', self.status, 
-            _('Send a 99 SC Status request message.'))
-        self.add_command('start', self.start,
-            _('Shortcut for a combination of "connect", "login", and "status" commands.'))
-        self.add_command('patron-info', self.patron_info,
-            _('Send a 63 Patron Information Request message.'))
 
-    def add_command(self, cmd, fn, desc):
+        self.add_command('login', self.login, _('Send a 93 Login request.'))
+
+        self.add_command('status', self.status, 
+            _('Send a SC Status (99) request message.'))
+
+        self.add_command('start', self.start,
+            _('Executes "connect" + "login" + "status" commands.'))
+
+        self.add_command('patron-status', self.patron_status,
+            _('Send a Patron Status Request (23) message.'), 
+            [{'required' : True, 'label' : _('patron-barcode')}]
+        )
+
+        self.add_command('patron-info', self.patron_info,
+            _('Send a Patron Information Request (63) message.'), 
+            [{'required' : True, 'label' : _('patron-barcode')}]
+        )
+
+        self.add_command('checkout', self.checkout,
+            _('Send a Checkout Request (11) message.'), 
+            [
+                {'required' : True, 'label' : _('item-barcode')},
+                {'required' : True, 'label' : _('patron-barcode')}
+            ]
+        )
+
+    def add_command(self, cmd, fn, desc, args=[]):
         self.commands_sorted.append(cmd)
         self.commands[cmd] = {
             'fn' : fn,
-            'desc': desc
+            'desc': desc,
+            'args' : args,
+            'min_args' : len([a for a in args if a['required']])
         }
 
     def help(self, *args):
         print(_('Commands:'))
         for cmd in self.commands_sorted:
-            print(_('  {0} - {1}').format(cmd, self.commands[cmd]['desc']))
+            blob = self.commands[cmd]
+            print(_('  {0} {1}\n    - {2}').format(
+                cmd, 
+                ' '.join([_('<{0}>').format(a['label']) for a in blob['args']]),
+                blob['desc']
+            ))
         return True
         
     def exit(self, *args):
@@ -153,13 +180,18 @@ class CommandRunner(object):
             if self.login(*args):
                 self.status(*args)
 
+    def patron_status(self, *args):
+        resp = self.client.patron_status_request(args[0])
+        print(repr(resp))
+        return True
+
     def patron_info(self, *args):
-
-        if len(args) == 0:
-            print(_('Patron barcode required'))
-            return False
-
         resp = self.client.patron_info_request(args[0])
+        print(repr(resp))
+        return True
+
+    def checkout(self, *args):
+        resp = self.client.checkout_request(args[0], args[1])
         print(repr(resp))
         return True
 
@@ -171,7 +203,18 @@ class CommandRunner(object):
             print(_('Command not found: {0}').format(command), file=sys.stderr)
             return
 
-        return self.commands[command]['fn'](*args)
+        if command not in ['connect', 'start'] and not self.client:
+            print(_('Command cannot be executed without a SIP server connection.  Try running the "start" command.'))
+            return
+           
+        cmd = self.commands[command]
+
+        if len(args) < cmd['min_args']:
+            print(_('Command {0} requires at least {1} argument(s)').format(
+                command, cmd['min_args']), file=sys.stderr)
+            return
+
+        return cmd['fn'](*args)
 
 class ConfigHandler(object):
     def __init__(self):
