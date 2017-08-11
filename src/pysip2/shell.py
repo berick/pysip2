@@ -34,7 +34,6 @@ PS2 = _('...')
 # -----------------------------------------------------------------
 # TODO: 
 # - optional parameters
-# - set connection vars via shell
 # -----------------------------------------------------------------
 
 def usage(exit_code=0):
@@ -125,6 +124,36 @@ class CommandRunner(object):
             [{'required' : True, 'label' : _('item-barcode')}]
         )
 
+        self.add_command('server', self.set_sip_attr,
+            _('Sets the current SIP server.'),
+            [{'required' : True, 'label' : _('hostname')}]
+        )
+
+        self.add_command('port', self.set_sip_attr,
+            _('Sets the current SIP port.'),
+            [{'required' : True, 'label' : _('port')}]
+        )
+
+        self.add_command('username', self.set_sip_attr,
+            _('Sets the current SIP username.'),
+            [{'required' : True, 'label' : _('username')}]
+        )
+
+        self.add_command('password', self.set_sip_attr,
+            _('Sets the current SIP password.'),
+            [{'required' : True, 'label' : _('password')}]
+        )
+
+        self.add_command('institution', self.set_sip_attr,
+            _('Sets the current SIP institution.'),
+            [{'required' : True, 'label' : _('institution')}]
+        )
+
+        self.add_command('location_code', self.set_sip_attr,
+            _('Sets the current SIP location code.'),
+            [{'required' : True, 'label' : _('location-code')}]
+        )
+
     def add_command(self, cmd, fn, desc, args=[]):
         self.commands_sorted.append(cmd)
         self.commands[cmd] = {
@@ -134,7 +163,7 @@ class CommandRunner(object):
             'min_args' : len([a for a in args if a['required']])
         }
 
-    def help(self, *args):
+    def help(self, cmd, *args):
         print(_('Commands:'))
         for cmd in self.commands_sorted:
             blob = self.commands[cmd]
@@ -145,14 +174,14 @@ class CommandRunner(object):
             ))
         return True
         
-    def exit(self, *args):
+    def exit(self, cmd, *args):
         print(_('Goodbye'))
         sys.exit(0)
 
-    def echo(self, *args):
+    def echo(self, cmd, *args):
         print(_('echo args={0}').format(str(list(args))))
 
-    def connect(self, *args):
+    def connect(self, cmd, *args):
         conf = self.config
 
         if self.client is not None:
@@ -173,7 +202,7 @@ class CommandRunner(object):
         print (_('Connect OK'))
         return True
 
-    def login(self, *args):
+    def login(self, cmd, *args):
         conf = self.config
         if self.client.login(conf.username, conf.password, conf.location_code):
             print(_('Login OK'))
@@ -182,7 +211,7 @@ class CommandRunner(object):
         print(_('Login Failed'))
         return False
 
-    def status(self, *args):
+    def status(self, cmd, *args):
         resp = self.client.sc_status()
         if resp.get_fixed_field_by_name('online_status').value == 'Y':
             print(_('Server is online'))
@@ -192,29 +221,43 @@ class CommandRunner(object):
         print(repr(resp))
         return False
 
-    def start(self, *args):
-        if self.connect(*args):
-            if self.login(*args):
-                self.status(*args)
+    def start(self, cmd, *args):
+        if self.connect(cmd, *args):
+            if self.login(cmd, *args):
+                self.status(cmd, *args)
 
-    def patron_status(self, *args):
+    def patron_status(self, cmd, *args):
         resp = self.client.patron_status_request(args[0])
         print(repr(resp))
         return True
 
-    def patron_info(self, *args):
+    def patron_info(self, cmd, *args):
         resp = self.client.patron_info_request(args[0])
         print(repr(resp))
         return True
 
-    def checkout(self, *args):
+    def checkout(self, cmd, *args):
         resp = self.client.checkout_request(args[0], args[1])
         print(repr(resp))
         return True
 
-    def checkin(self, *args):
+    def checkin(self, cmd, *args):
         resp = self.client.checkin_request(args[0], self.config.location_code)
         print(repr(resp))
+        return True
+
+    def set_sip_attr(self, attr, *args):
+
+        # Any changes to SIP connection attributes require a reconnect.
+        # Force a disconnect, let the user reconnect.
+        if self.client is not None:
+            print(_('Disconnecting from {0}...').format(self.config.server))
+            self.client.disconnect()
+            self.client = None
+
+        setattr(self.config, attr, args[0])
+        print(_('Set SIP {0} to {1}').format(attr, args[0]))
+
         return True
 
     def run(self, line):
@@ -225,8 +268,9 @@ class CommandRunner(object):
             print(_('Command not found: {0}').format(command), file=sys.stderr)
             return
 
-        if command not in ['help','echo','connect','start','exit','quit'] \
-            and not self.client:
+        # These commands require an active SIP connection
+        if command in ['status','patron-status','patron-info',
+            'item-info','checkout','checkin'] and not self.client:
             print(_('Command cannot be executed without a SIP server '
                 'connection.  Try running the "start" command.'))
             return
@@ -238,7 +282,7 @@ class CommandRunner(object):
                 command, cmd['min_args']), file=sys.stderr)
             return
 
-        return cmd['fn'](*args)
+        return cmd['fn'](command, *args)
 
 class ConfigHandler(object):
     def __init__(self):
