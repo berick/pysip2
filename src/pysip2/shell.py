@@ -15,11 +15,7 @@
 # Console code heavily inspired by
 # https://gist.github.com/rduplain/899f6a5e583a85668822
 # -----------------------------------------------------------------------
-import logging
-import code
-import readline
-import sys
-import shlex
+import sys, logging, code, readline, shlex, time
 from gettext import gettext as _
 import logging.config, getopt, configparser
 import pysip2.client
@@ -88,10 +84,12 @@ class CommandRunner(object):
         self.add_command('help', self.help, _('Display help message'))
         self.add_command('echo', self.echo, _('Echo command with arguments'))
         self.add_command('exit', self.exit, _('Exit shell'))
-        self.add_command('quit', self.exit, _('Exit shell'))
 
         self.add_command('connect', self.connect, 
             _('Open a network connection to the SIP server.'))
+
+        self.add_command('disconnect', self.disconnect, 
+            _('Close a network connection to the SIP server.'))
 
         self.add_command('login', self.login, _('Send a 93 Login request.'))
 
@@ -125,33 +123,38 @@ class CommandRunner(object):
         )
 
         self.add_command('server', self.set_sip_attr,
-            _('Sets the current SIP server.'),
-            [{'required' : True, 'label' : _('hostname')}]
+            _('View or set the current SIP server.'),
+            [{'required' : False, 'label' : _('hostname')}]
         )
 
         self.add_command('port', self.set_sip_attr,
-            _('Sets the current SIP port.'),
-            [{'required' : True, 'label' : _('port')}]
+            _('View or set the current SIP port.'),
+            [{'required' : False, 'label' : _('port')}]
         )
 
         self.add_command('username', self.set_sip_attr,
-            _('Sets the current SIP username.'),
-            [{'required' : True, 'label' : _('username')}]
+            _('View or set the current SIP username.'),
+            [{'required' : False, 'label' : _('username')}]
         )
 
         self.add_command('password', self.set_sip_attr,
-            _('Sets the current SIP password.'),
-            [{'required' : True, 'label' : _('password')}]
+            _('View or set the current SIP password.'),
+            [{'required' : False, 'label' : _('password')}]
         )
 
         self.add_command('institution', self.set_sip_attr,
-            _('Sets the current SIP institution.'),
-            [{'required' : True, 'label' : _('institution')}]
+            _('View or set the current SIP institution.'),
+            [{'required' : False, 'label' : _('institution')}]
         )
 
         self.add_command('location_code', self.set_sip_attr,
-            _('Sets the current SIP location code.'),
-            [{'required' : True, 'label' : _('location-code')}]
+            _('View or set the current SIP location code.'),
+            [{'required' : False, 'label' : _('location-code')}]
+        )
+
+        self.add_command('timing', self.set_conf_attr,
+            _('View or set the message timing reporting'),
+            [{'required' : False, 'label' : _('on/off')}]
         )
 
     def add_command(self, cmd, fn, desc, args=[]):
@@ -183,10 +186,7 @@ class CommandRunner(object):
 
     def connect(self, cmd, *args):
         conf = self.config
-
-        if self.client is not None:
-            print(_('Disconnecting...'))
-            self.client.disconnect()
+        self.disconnect(cmd, args)
 
         self.client = pysip2.client.Client(conf.server, int(conf.port))
         self.client.default_institution = conf.institution
@@ -201,6 +201,15 @@ class CommandRunner(object):
 
         print (_('Connect OK'))
         return True
+
+    def disconnect(self, cmd, *args):
+
+        if self.client is None:
+            return
+        
+        self.client.disconnect()
+        print(_('Disconnected from {0}').format(self.config.server))
+           
 
     def login(self, cmd, *args):
         conf = self.config
@@ -248,6 +257,10 @@ class CommandRunner(object):
 
     def set_sip_attr(self, attr, *args):
 
+        if len(args) == 0:
+            print(getattr(self.config, attr))
+            return
+
         # Any changes to SIP connection attributes require a reconnect.
         # Force a disconnect, let the user reconnect.
         if self.client is not None:
@@ -256,9 +269,22 @@ class CommandRunner(object):
             self.client = None
 
         setattr(self.config, attr, args[0])
-        print(_('Set SIP {0} to {1}').format(attr, args[0]))
+        print(_('Set SIP attribute "{0}" to "{1}"').format(attr, args[0]))
 
         return True
+
+    def set_conf_attr(self, attr, *args):
+        ''' Just like set_sip_attr minus the disconnect '''
+
+        if len(args) == 0:
+            print(getattr(self.config, attr))
+            return
+
+        setattr(self.config, attr, args[0])
+        print(_('Set config option "{0}" to "{1}"').format(attr, args[0]))
+
+        return True
+
 
     def run(self, line):
         tokens = shlex.split(line, comments=True)
@@ -282,7 +308,14 @@ class CommandRunner(object):
                 command, cmd['min_args']), file=sys.stderr)
             return
 
-        return cmd['fn'](command, *args)
+        start_time = time.time()
+        res = cmd['fn'](command, *args)
+        end_time = time.time()
+
+        if self.config.timing == 'on':
+            print(_('Request time: %0.2f seconds' % (end_time - start_time)))
+
+        return res
 
 class ConfigHandler(object):
     def __init__(self):
@@ -293,6 +326,7 @@ class ConfigHandler(object):
         self.username = None
         self.password = None
         self.autostart = False
+        self.timing = 'off'
 
     def setup(self):
 
