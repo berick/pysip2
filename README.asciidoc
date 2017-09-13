@@ -19,9 +19,49 @@ $ PYTHONPATH=src examples/checkin.py <item_barcode>
 # ...
 ------------------------------------------------------------------
 
+ * There is also a SIP shell for manually entering commands.  The shell 
+   is initialized with values from pysip2-client.ini, but each
+   configuration value may also be manually overridden within the shell.
+
+[source,sh]
+------------------------------------------------------------------
+$ PYTHONPATH=src python3 src/pysip2/shell.py
+sipsh% server
+my-sip-server1.example.org
+sipsh% server my-sip-server2.example.org
+Set SIP attribute "server" to "my-sip-server2.example.org"
+sipsh% username sip-username
+Set SIP attribute "username" to "sip-username"
+sipsh% password sip-password
+Set SIP attribute "password" to "sip-password"
+sipsh% start
+Connect OK
+Login OK
+Server is online
+sipsh% patron-status 123456789
+Label                           : Patron Status Response
+Code                            : 24
+patron status                   :   Y           
+language                        : 000
+transaction date                : 20170913    092221
+[AE] personal name              : JANE Q PATRON
+[AA] patron identifier          : 123456789
+[BL] valid patron               : Y
+[CQ] valid patron password      : N
+[BH] currency type              : USD
+[AO] institution id             : my-institution
+sipsh% help
+Commands:
+  help 
+    - Display help message
+  echo 
+    - Echo command with arguments
+...
+------------------------------------------------------------------
+
+
 == TODO
 
- * documentation
  * checksums
  * fee paid message + response
  * hold message + response
