@@ -101,7 +101,10 @@ class CommandRunner(object):
 
         self.add_command('patron-status', self.patron_status,
             _('Send a Patron Status Request (23) message.'), 
-            [{'required' : True, 'label' : _('patron-barcode')}]
+            [
+                {'required' : True,  'label' : _('patron-barcode')},
+                {'required' : False, 'label' : _('patron-password')}
+            ]
         )
 
         self.add_command('patron-info', self.patron_info,
@@ -170,11 +173,19 @@ class CommandRunner(object):
         print(_('Commands:'))
         for cmd in self.commands_sorted:
             blob = self.commands[cmd]
+
+            cmd_args = ' '.join([_('<{0}>')
+                .format(a['label']) for a in blob['args'] if a['required']])
+            if len([a for a in blob['args'] if not a['required']]) > 0:
+                if len(cmd_args) > 0:
+                    cmd_args = cmd_args + ' '
+                cmd_args = cmd_args + '['
+                cmd_args = cmd_args + ' '.join([_('<{0}>').format(
+                    a['label']) for a in blob['args'] if not a['required']])
+                cmd_args = cmd_args + ']'
+
             print(_('  {0} {1}\n    - {2}').format(
-                cmd, 
-                ' '.join([_('<{0}>').format(a['label']) for a in blob['args']]),
-                blob['desc']
-            ))
+                cmd, cmd_args, blob['desc']))
         return True
         
     def exit(self, cmd, *args):
@@ -236,7 +247,11 @@ class CommandRunner(object):
                 self.status(cmd, *args)
 
     def patron_status(self, cmd, *args):
-        resp = self.client.patron_status_request(args[0])
+        barcode = args[0]
+        req_args = {}
+        if len(args) > 1:
+            req_args["patron_pwd"] = args[1]
+        resp = self.client.patron_status_request(args[0], **req_args)
         print(repr(resp))
         return True
 
@@ -287,6 +302,8 @@ class CommandRunner(object):
 
 
     def run(self, line):
+        if len(line) == 0: return True
+
         tokens = shlex.split(line, comments=True)
         command, args = tokens[0], tokens[1:]
 
