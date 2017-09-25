@@ -15,7 +15,7 @@
 # Console code heavily inspired by
 # https://gist.github.com/rduplain/899f6a5e583a85668822
 # -----------------------------------------------------------------------
-import sys, logging, code, readline, shlex, time
+import sys, logging, code, readline, shlex, time, os.path
 from gettext import gettext as _
 import logging.config, getopt, configparser
 import pysip2.client
@@ -311,6 +311,15 @@ class CommandRunner(object):
             print(_('Command not found: {0}').format(command), file=sys.stderr)
             return
 
+        if command in ['start', 'connect'] and (
+            not self.config.port 
+            or not self.config.server
+            or not self.config.username
+            or not self.config.password):
+            print(_("Command cannot be executed without values for "
+                "server, port, username, and password."))
+            return
+
         # These commands require an active SIP connection
         if command in ['status','patron-status','patron-info',
             'item-info','checkout','checkin'] and not self.client:
@@ -342,18 +351,23 @@ class ConfigHandler(object):
         self.institution = None
         self.username = None
         self.password = None
+        self.location_code = None
         self.autostart = False
         self.timing = 'off'
 
     def setup(self):
 
-        logging.config.fileConfig(self.configfile)
-        config = configparser.ConfigParser()
-        config.read(self.configfile)
+        # No config file means the caller must enter connection 
+        # details via the shell.
+        if not os.path.isfile(self.configfile): return
 
+        logging.config.fileConfig(self.configfile)
         # prevent stdout debug logs from cluttering the shell.
         # TODO: make it possible to change this from within the shell.
         logging.getLogger().setLevel('WARNING')
+
+        config = configparser.ConfigParser()
+        config.read(self.configfile)
 
         if 'client' not in config: return
 
