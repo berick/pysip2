@@ -19,9 +19,10 @@ $ PYTHONPATH=src examples/checkin.py <item_barcode>
 # ...
 ------------------------------------------------------------------
 
- * There is also a SIP shell for manually entering commands.  The shell 
-   is initialized with values from pysip2-client.ini, but each
-   configuration value may also be manually overridden within the shell.
+ * There is also a SIP shell for manually entering commands and seeing
+   message responses.  The shell will look for a pysip2-client.ini in the
+   working directory.  If found, it will be used to initialize the shell.
+   Otherwise, all connection values must be manually entered into the shell.
 
 [source,sh]
 ------------------------------------------------------------------
