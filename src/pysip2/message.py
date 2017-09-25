@@ -27,7 +27,7 @@ class Field(object):
         self.value = value
     
     def __str__(self):
-        return self.spec.code + self.value + '|'
+        return self.spec.code + (self.value or '') + '|'
 
     def __repr__(self):
         spaces = STRING_COLUMN_PAD - len(self.spec.label) - 5
@@ -41,7 +41,7 @@ class FixedField(Field):
 
     def __repr__(self):
         spaces = STRING_COLUMN_PAD - len(self.spec.label)
-        return self.spec.label + ' '*spaces + ': ' + self.value
+        return self.spec.label + ' '*spaces + ': ' + (self.value or '')
 
 class Message(object):
     '''Models a complete SIP2 message.'''
