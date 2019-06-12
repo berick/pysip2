@@ -383,6 +383,67 @@ class Client(object):
         self.send_msg(msg)
         return self.recv_msg()
 
+    def fee_paid_request(self, patron_id, fee_amount, **kwargs):
+        ''' Send a Fee Paid message.
+
+        fee_id refers the ILS identifier for the fee / transaction.
+
+        kwargs
+            - institution
+                -- required if default_institution is unset
+            - transaction_id
+                -- Unique client-side identifier for the payment
+            - fee_id
+                -- Unique ILS identifier for the fee/transaction toward
+                    which the payment is applied.
+            - fee_type
+                -- defaults to 01 (other/unknown)
+            - payment_type
+                -- defaults to 00 (cash)
+            - check_number
+            - register_login
+            - patron_pwd
+            - currency_type
+                -- defaults to USD
+        '''
+
+        logging.debug(
+            "fee_paid_request() for patron %s and amount %s" % (
+                patron_id, fee_amount))
+
+        msg = Message(
+            spec = mspec.fee_paid,
+            fixed_fields = [
+                FixedField(ffspec.date, Message.sipdate()),
+                FixedField(
+                    ffspec.fee_type,
+                    kwargs.get('fee_type', '01')),
+                FixedField(
+                    ffspec.payment_type,
+                    kwargs.get('payment_type', '00')),
+                FixedField(
+                    ffspec.currency_type,
+                    kwargs.get('currency_type', 'USD')),
+            ]
+        )
+
+        msg.add_field(
+            fspec.institution_id, 
+            kwargs.get('institution', self.default_institution))
+
+        msg.add_field(fspec.patron_id, patron_id)
+        msg.add_field(fspec.fee_amount, fee_amount)
+
+        msg.maybe_add_field(fspec.terminal_pwd, self.terminal_pwd)
+        msg.maybe_add_field(fspec.fee_identifier, kwargs.get('fee_id'))
+        msg.maybe_add_field(fspec.transaction_id, kwargs.get('transaction_id'))
+        msg.maybe_add_field(fspec.patron_pwd, kwargs.get('patron_pwd'))
+        msg.maybe_add_field(fspec.check_number, kwargs.get('check_number'))
+        msg.maybe_add_field(fspec.register_login, kwargs.get('register_login'))
+
+        self.send_msg(msg)
+        return self.recv_msg()
+
 
 class ClientLog(object):
     '''

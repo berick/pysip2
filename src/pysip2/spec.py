@@ -89,6 +89,9 @@ FixedFieldSpec.ok                 = FixedFieldSpec(1, _('ok'))
 FixedFieldSpec.uid_algo           = FixedFieldSpec(1, _('uid algorithm'))
 FixedFieldSpec.pwd_algo           = FixedFieldSpec(1, _('pwd algorithm'))
 FixedFieldSpec.fee_type           = FixedFieldSpec(2, _('fee type'))
+FixedFieldSpec.payment_type       = FixedFieldSpec(2, _('payment type'))
+FixedFieldSpec.currency_type      = FixedFieldSpec(3, _('currency type'))
+FixedFieldSpec.payment_accepted   = FixedFieldSpec(1, _('payment accepted'))
 FixedFieldSpec.circ_status        = FixedFieldSpec(2, _('circulation status'))
 FixedFieldSpec.security_marker    = FixedFieldSpec(2, _('security marker'))
 FixedFieldSpec.language           = FixedFieldSpec(3, _('language'))
@@ -185,8 +188,6 @@ FieldSpec.login_uid          = FieldSpec('CN', _('login user id'))
 FieldSpec.login_pwd          = FieldSpec('CO', _('login password'))
 FieldSpec.location_code      = FieldSpec('CP', _('location code'))
 FieldSpec.valid_patron_pwd   = FieldSpec('CQ', _('valid patron password'))
-FieldSpec.patron_birth_date  = FieldSpec('PB', _('patron birth date'))
-FieldSpec.patron_class       = FieldSpec('PC', _('patron class'))
 FieldSpec.patron_inet_profile= FieldSpec('PI', _('patron internet profile'))
 FieldSpec.call_number        = FieldSpec('CS', _('call number'))
 FieldSpec.collection_code    = FieldSpec('CR', _('collection code'))
@@ -194,6 +195,13 @@ FieldSpec.alert_type         = FieldSpec('CV', _('alert type'))
 FieldSpec.hold_patron_id     = FieldSpec('CY', _('hold patron id'))
 FieldSpec.hold_patron_name   = FieldSpec('DA', _('hold patron name'))
 FieldSpec.destination_location = FieldSpec('CT', _('destination location'))
+
+# Envisionware Terminal Extensions
+FieldSpec.patron_expire      = FieldSpec('PA', _('patron expire date'))
+FieldSpec.patron_birth_date  = FieldSpec('PB', _('patron birth date'))
+FieldSpec.patron_class       = FieldSpec('PC', _('patron class'))
+FieldSpec.register_login     = FieldSpec('OR', _('register login'))
+FieldSpec.check_number       = FieldSpec('RN', _('check number'))
 
 # -----------------------------------------------------------------
 # Message Types
@@ -340,3 +348,20 @@ MessageSpec.checkin_resp = MessageSpec(
     ]
 )
  
+MessageSpec.fee_paid = MessageSpec(
+    '37', _('Fee Paid'), 
+    fixed_fields = [
+        FixedFieldSpec.date,
+        FixedFieldSpec.fee_type,
+        FixedFieldSpec.payment_type,
+        FixedFieldSpec.currency_type
+    ]
+)
+
+MessageSpec.fee_paid_resp = MessageSpec(
+    '38', _('Fee Paid Response'), 
+    fixed_fields = [
+        FixedFieldSpec.payment_accepted,
+        FixedFieldSpec.date
+    ]
+)

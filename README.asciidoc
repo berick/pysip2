@@ -64,8 +64,6 @@ Commands:
 == TODO
 
  * checksums
- * fee paid message + response
  * hold message + response
  * renew message + response
  * renew all message + response
- * other message types
