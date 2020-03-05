@@ -65,7 +65,6 @@ class MessageSpec(object):
     # code => spec map of registered message specs
     registry = {}
 
-    # ff_len does not include the date
     def __init__(self, code, label, **kwargs):
         self.code     = code
         self.label    = label
@@ -256,7 +255,6 @@ MessageSpec.item_info = MessageSpec(
 
 MessageSpec.item_info_resp = MessageSpec(
     '18', _('Item Information Response'), 
-    ff_len = 6,
     fixed_fields = [
         FixedFieldSpec.circ_status,
         FixedFieldSpec.security_marker,

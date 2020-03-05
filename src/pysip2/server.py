@@ -5,13 +5,14 @@ from pysip2.spec import FieldSpec as fspec
 from pysip2.spec import FixedFieldSpec as ffspec
 from pysip2.spec import TEXT_ENCODING, LINE_TERMINATOR, SOCKET_BUFSIZE
 from pysip2.message import Message, FixedField, Field
-
+from pysip2.ilsmod import ILSMod
 
 class SIPServer(object):
 
-    def __init__(self, host, port):
+    def __init__(self, host, port, ils):
         self.host = host
         self.port = port
+        self.ils  = ils
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind((self.host, self.port))
@@ -34,11 +35,11 @@ class SIPServer(object):
     def handle_client(self, client, address):
         ''' Starts a new SIPServerConnection '''
 
-        con = SIPServerConnection(client, address)
+        con = SIPServerConnection(client, address, self.ils)
 
         try:
             con.listen_loop()
-        except as err:
+        except Exception as err:
             logging.warn(
                 "SIPServerConnection from %s exited unexpectedly: %s" % (
                     address, err
@@ -51,9 +52,10 @@ class SIPServerConnection(object):
 
     LINE_TERMINATOR_LEN = len(LINE_TERMINATOR)
 
-    def __init__(self, client, address):
+    def __init__(self, client, address, ils):
         self.client = client
         self.address = address
+        self.ils = ils
 
     def child_init(self):
         ''' Called when the thread starts '''
@@ -64,14 +66,14 @@ class SIPServerConnection(object):
         pass
 
     def disconnect(self):
-        logging.debug('disconnecting client: ' + self.address);
+        logging.debug('disconnecting client: ' + repr(self.address));
 
         try:
-            self.sock.close()
-        except as err:
+            self.client.close()
+        except Exception as err:
             logging.warn(
                 "Error closing client socket for %s : %s" % (
-                    address, err
+                    self.address, err
                 )
             )
 
@@ -102,7 +104,7 @@ class SIPServerConnection(object):
             buf = self.client.recv(SOCKET_BUFSIZE)
 
             if buf is None or len(buf) == 0: # client disconnected
-                logging.warn("Client connection severed.  Disconnecting");
+                logging.info("Client connection severed.  Disconnecting");
                 self.disconnect()
                 return None
 
@@ -118,33 +120,19 @@ class SIPServerConnection(object):
     def dispatch_message(self, msg):
         msg_code = msg.spec.code
 
-        resp = None
-        if msg_code == mspec.login.code:
-            resp = self.handle_login(msg)
-        #elif msg_code == stuff:
-            # stuff
-        else:
-            logging.debug("no handler defined for message type: " + msg_code)
+        resp = self.ils.handle_request(msg)
 
         if resp is not None:
             self.send_msg(resp)
-
-    def handle_login(self, msg):
-        logging.debug("handle_login with " + repr(msg)) 
-
-        return Message(
-            spec = mspec.login_resp,
-            fixed_fields = [
-                FixedField(ffspec.ok, '1')
-            ]
-        )
+        else:
+            logging.warn("no handler defined for message type: " + msg_code)
             
 # TODO: read config file
 # TODO: move main server executable to external file?
-# TODO: move SIPServerConnection to standalone file?
 
 if __name__ == "__main__":
     #port_num = input("Port? ")
-    port_num = 4444
-    SIPServer('', port_num).listen()
+    port_num = 6001
+    ils = ILSMod()
+    SIPServer('', port_num, ils).listen()
 
