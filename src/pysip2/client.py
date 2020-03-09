@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------
-# Copyright (C) 2015 King County Library System
+# Copyright (C) 2015-2020 King County Library System
 # Bill Erickson <berickxx@gmail.com>
 # 
 # This program is free software; you can redistribute it and/or

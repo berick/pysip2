@@ -1,11 +1,27 @@
-import sys, socket, random, time, logging, socket, threading
+# -----------------------------------------------------------------------
+# Copyright (C) 2020 King County Library System
+# Bill Erickson <berickxx@gmail.com>
+# 
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# -----------------------------------------------------------------------
+import sys, socket, random, time, socket, threading
+import logging, logging.config, getopt, configparser
 from gettext import gettext as _
 from pysip2.spec import MessageSpec as mspec
 from pysip2.spec import FieldSpec as fspec
 from pysip2.spec import FixedFieldSpec as ffspec
 from pysip2.spec import TEXT_ENCODING, LINE_TERMINATOR, SOCKET_BUFSIZE
 from pysip2.message import Message, FixedField, Field
-from pysip2.ilsmod import ILSMod
+from pysip2.ils import IlsMod
+from pysip2.ilsmods.evergreen import EvergreenMod
 
 class SIPServer(object):
 
@@ -23,7 +39,12 @@ class SIPServer(object):
 
         while True:
 
-            client, address = self.sock.accept()
+            try:
+                client, address = self.sock.accept()
+            except KeyboardInterrupt:
+                logging.info("Exiting server on keyboard interrupt")
+                return
+
             logging.debug("received connection from %s", address)
 
             # start a client handling thread
@@ -127,12 +148,18 @@ class SIPServerConnection(object):
         else:
             logging.warn("no handler defined for message type: " + msg_code)
             
-# TODO: read config file
-# TODO: move main server executable to external file?
+if __name__ == '__main__':
 
-if __name__ == "__main__":
-    #port_num = input("Port? ")
-    port_num = 6001
-    ils = ILSMod()
-    SIPServer('', port_num, ils).listen()
+    logging.config.fileConfig('pysip2-server.ini')
+    config = configparser.ConfigParser()
+    config.read('pysip2-server.ini')
+
+    server = config['server']
+    host = server.get('host', '')
+    port = server.get('port', 6001)
+
+    #ils = ILSMod()
+    ils = EvergreenMod()
+    ils.init()
+    SIPServer(host, int(port), ils).listen()
 

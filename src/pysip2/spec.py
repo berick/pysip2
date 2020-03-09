@@ -33,6 +33,7 @@ class FixedFieldSpec(object):
     def __init__(self, length, label):
         self.length = length
         self.label = label
+        self.values = []
 
     def __str__(self):
         return 'FixedFieldSpec() length=%s label=%s' % (
@@ -79,6 +80,7 @@ class MessageSpec(object):
             logging.warn("No message spec found with code '%s'" % code)
         return spec
 
+
 # -----------------------------------------------------------------
 # Fixed Fields
 # -----------------------------------------------------------------
@@ -123,6 +125,39 @@ FixedFieldSpec.offline_ok         = FixedFieldSpec(1, _('offline ok'))
 FixedFieldSpec.timeout_period     = FixedFieldSpec(3, _('timeout period'))
 FixedFieldSpec.retries_allowed    = FixedFieldSpec(3, _('retries allowed'))
 FixedFieldSpec.date_time_sync     = FixedFieldSpec(18,_('date/time sync'))
+
+# -----------------------------------------------------------------
+# Fixed Field Options
+# -----------------------------------------------------------------
+
+FixedFieldSpec.circ_status.OTHER = '1'
+FixedFieldSpec.circ_status.ON_ORDER = '2'
+FixedFieldSpec.circ_status.AVAILABLE = '3'
+FixedFieldSpec.circ_status.CHARGED = '4'
+FixedFieldSpec.circ_status.CHARGED_NOT_RECALLED = '5'
+FixedFieldSpec.circ_status.IN_PROCESS = '6'
+FixedFieldSpec.circ_status.RECALLED = '7'
+FixedFieldSpec.circ_status.ON_HOLD_SHELF = '8'
+FixedFieldSpec.circ_status.WAITING_FOR_RESHELF = '9'
+FixedFieldSpec.circ_status.IN_TRANSIT = '10'
+FixedFieldSpec.circ_status.CLAIMS_RETURNED = '11'
+FixedFieldSpec.circ_status.LOST = '12'
+FixedFieldSpec.circ_status.MISSING = '13'
+
+FixedFieldSpec.security_marker.OTHER = '00'
+FixedFieldSpec.security_marker.NONE = '01'
+FixedFieldSpec.security_marker.TATTLE_TAPE_SECURITY_STRIP = '02'
+FixedFieldSpec.security_marker.WHISPER_TAPE = '03'
+
+FixedFieldSpec.fee_type.OTHER_UNKNOWN = '01'
+FixedFieldSpec.fee_type.ADMINISTRATIVE = '02'
+FixedFieldSpec.fee_type.DAMAGE = '03'
+FixedFieldSpec.fee_type.OVERDUE = '04'
+FixedFieldSpec.fee_type.PROCESSING = '05'
+FixedFieldSpec.fee_type.RENTAL = '06'
+FixedFieldSpec.fee_type.REPLACEMENT = '07'
+FixedFieldSpec.fee_type.COMPUTER_ACCESS_CHARGE = '08'
+FixedFieldSpec.fee_type.HOLD_FEE = '09'
 
 # -----------------------------------------------------------------
 # Variable-Length Fields
@@ -201,6 +236,22 @@ FieldSpec.patron_birth_date  = FieldSpec('PB', _('patron birth date'))
 FieldSpec.patron_class       = FieldSpec('PC', _('patron class'))
 FieldSpec.register_login     = FieldSpec('OR', _('register login'))
 FieldSpec.check_number       = FieldSpec('RN', _('check number'))
+
+# -----------------------------------------------------------------
+# Variable Lenght Field Options
+# -----------------------------------------------------------------
+
+FieldSpec.media_type.OTHER = '000'
+FieldSpec.media_type.BOOK = '001'
+FieldSpec.media_type.MAGAZINE = '002'
+FieldSpec.media_type.BOUND_JOURNAL = '003'
+FieldSpec.media_type.AUDIO_TAPE = '004'
+FieldSpec.media_type.VIDEO_TAPE = '005'
+FieldSpec.media_type.CD_CDROM = '006'
+FieldSpec.media_type.DISKETTE = '007'
+FieldSpec.media_type.BOOK_WITH_DISKETTE = '008'
+FieldSpec.media_type.BOOK_WITH_CD = '009'
+FieldSpec.media_type.BOOK_WITH_AUDIO_TAPE = '010'
 
 # -----------------------------------------------------------------
 # Message Types

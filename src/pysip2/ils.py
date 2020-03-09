@@ -1,3 +1,17 @@
+# -----------------------------------------------------------------------
+# Copyright (C) 2015-2020 King County Library System
+# Bill Erickson <berickxx@gmail.com>
+# 
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# -----------------------------------------------------------------------
 import sys, logging
 from gettext import gettext as _
 from pysip2.spec import MessageSpec as mspec
@@ -7,7 +21,7 @@ from pysip2.message import Message, FixedField, Field
 
 institution = 'example'
 
-class ILSMod(object):
+class IlsMod(object):
     ''' Implements dummy responses to SIP Server requests for demonstration
         purposes.
     '''
@@ -26,6 +40,9 @@ class ILSMod(object):
 
         elif msg.spec.code == mspec.patron_info.code:
             return self.patron_info(msg)
+
+        elif msg.spec.code == mspec.item_info.code:
+            return self.item_info(msg)
 
         return None 
 
@@ -61,9 +78,7 @@ class ILSMod(object):
 
     def patron_info(self, msg):
 
-        patron_id_field = msg.get_field(fspec.patron_id.code)
-        if patron_id_field:
-            patron_id = patron_id_field.value
+        patron_id = msg.get_field_value(fspec.patron_id.code)
 
         return Message(
             spec = mspec.patron_info_resp,
@@ -86,4 +101,24 @@ class ILSMod(object):
             ]
         )
 
+    def item_info(self, msg):
+
+        item_id = msg.get_field_value(fspec.item_id.code)
+
+        return Message(
+            spec = mspec.item_info_resp,
+            fixed_fields = [
+                FixedField(ffspec.circ_status, ffspec.circ_status.AVAILABLE),
+                FixedField(ffspec.security_marker, ffspec.security_marker.WHISPER_TAPE),
+                FixedField(ffspec.fee_type, ffspec.fee_type.OTHER_UNKNOWN),
+                FixedField(ffspec.date, Message.sipdate())
+            ],
+            fields = [
+                Field(fspec.item_id, item_id),
+                Field(fspec.title_id, 'Field Guide To Being Watched by Birds'),
+                Field(fspec.media_type, fspec.media_type.BOUND_JOURNAL),
+                Field(fspec.current_location, 'BR1'),
+                Field(fspec.permanent_location, 'BR2')
+            ]
+        )
 
