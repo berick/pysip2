@@ -1,4 +1,5 @@
 *.pyc
+*.swp
 pysip2-client.ini
 pysip2-server.ini
 __pycache__

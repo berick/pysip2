@@ -95,13 +95,17 @@ class Message(object):
 
         msg = Message(msg_txt=msg_txt)
 
+        # Reset the msg_txt so __str__ does not attempt to use the 
+        # cached incomplete version
+        msg.msg_txt = ''
+
         # Then add the Fields
         if 'fields' in msg_struct:
             for field in msg_struct['fields']:
-                field_code = field.keys()[0]
-                field_value = field[field_code]
-                spec = FieldSpec.find_by_code(field_code)
-                msg.add_field(spec, field_value)
+                for field_code in field.keys(): # will be just one
+                    field_value = field[field_code]
+                    spec = fspec.find_by_code(field_code)
+                    msg.add_field(spec, field_value)
 
         return msg
         
