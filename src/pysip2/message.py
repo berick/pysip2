@@ -12,7 +12,7 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 # -----------------------------------------------------------------------
-import time, logging
+import time, logging, json
 from gettext import gettext as _
 from pysip2.spec import MessageSpec as mspec
 from pysip2.spec import FieldSpec as fspec
@@ -46,7 +46,6 @@ class FixedField(Field):
 class Message(object):
     '''Models a complete SIP2 message.'''
 
-
     def __init__(self, **kwargs):
         self.fields = []
         self.fixed_fields = []
@@ -58,6 +57,54 @@ class Message(object):
         if self.msg_txt != '':
             self.parse_txt()
 
+    def to_json(self):
+
+        msg_struct = {
+            'code': self.spec.code,    
+            'fixed_fields': [],
+            'fields': []
+        }
+
+        for ff in self.fixed_fields:
+            msg_struct['fixed_fields'].append(ff.value or '')
+
+        for f in self.fields:
+            msg_struct['fields'].append({f.spec.code: f.value})
+
+        return json.dumps(msg_struct)
+
+    @staticmethod
+    def from_json(msg_json) -> 'Message':
+
+        if msg_json == '' or msg_json is None:
+            return None
+
+        try:
+            msg_struct = json.loads(msg_json)
+        except Exception as e:
+            logging.error("Error creating SIP message from JSON " + repr(e))
+            return None
+
+        # Start with a SIP message string which contains only the 
+        # message code and its fixed fields.
+        msg_txt = '%s%s%s' % (
+            msg_struct['code'],
+            ''.join(msg_struct['fixed_fields']),
+            LINE_TERMINATOR
+        )
+
+        msg = Message(msg_txt=msg_txt)
+
+        # Then add the Fields
+        if 'fields' in msg_struct:
+            for field in msg_struct['fields']:
+                field_code = field.keys()[0]
+                field_value = field[field_code]
+                spec = FieldSpec.find_by_code(field_code)
+                msg.add_field(spec, field_value)
+
+        return msg
+        
     def __str__(self):
         '''Returns a human-readable formatted SIP2 message.'''
 

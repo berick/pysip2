@@ -15,6 +15,7 @@
 # -----------------------------------------------------------------------
 import sys, logging, logging.config, getopt, configparser
 import pysip2.client
+import json
 
 '''
 PYTHONPATH=../src/ ./sc-status.py
@@ -45,6 +46,7 @@ client.login(username, password, location_code)
 resp = client.sc_status()
 
 logging.info('\n'+repr(resp))
+logging.info('\n' + resp.to_json())
 
 logging.info("offline OK value => " + \
     resp.get_fixed_field_by_name('offline_ok').value)

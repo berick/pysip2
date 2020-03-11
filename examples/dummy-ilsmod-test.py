@@ -37,12 +37,15 @@ client.login(username, password, location_code)
 
 resp = client.sc_status()
 print('\n%s\n' % repr(resp))
+print('\n' + resp.to_json())
 
 resp = client.item_info_request(copy_barcode)
 print('\n%s\n' % repr(resp))
+print('\n' + resp.to_json())
 
 resp = client.patron_info_request(patron_barcode)
 print('\n%s\n' % repr(resp))
+print('\n' + resp.to_json())
 
 client.disconnect()
 client.log_messages()

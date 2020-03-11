@@ -12,23 +12,21 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 # -----------------------------------------------------------------------
-import sys, socket, random, time, socket, threading
+import sys, socket, random, time, socket, threading, urllib3, uuid
 import logging, logging.config, getopt, configparser
+from urllib.parse import urlencode
 from gettext import gettext as _
 from pysip2.spec import MessageSpec as mspec
 from pysip2.spec import FieldSpec as fspec
 from pysip2.spec import FixedFieldSpec as ffspec
 from pysip2.spec import TEXT_ENCODING, LINE_TERMINATOR, SOCKET_BUFSIZE
 from pysip2.message import Message, FixedField, Field
-from pysip2.ils import IlsMod
-from pysip2.ilsmods.evergreen import EvergreenMod
 
 class SIPServer(object):
 
-    def __init__(self, host, port, ils):
+    def __init__(self, host, port):
         self.host = host
         self.port = port
-        self.ils  = ils
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind((self.host, self.port))
@@ -56,7 +54,7 @@ class SIPServer(object):
     def handle_client(self, client, address):
         ''' Starts a new SIPServerConnection '''
 
-        con = SIPServerConnection(client, address, self.ils)
+        con = SIPServerConnection(client, address)
 
         try:
             con.listen_loop()
@@ -67,43 +65,62 @@ class SIPServer(object):
                 )
             )
 
-
 class SIPServerConnection(object):
     ''' Models a single client connection to the SIPServer. '''
 
     LINE_TERMINATOR_LEN = len(LINE_TERMINATOR)
 
-    def __init__(self, client, address, ils):
-        self.client = client
-        self.address = address
-        self.ils = ils
+    ''' Connection instances use a shared HTTP(S) connection pool '''
+    http_pool = None
+
+    def __init__(self, sip_client, sip_address):
+        self.sip_client = sip_client
+        self.sip_address = sip_address
+        self.http_host = None
+        self.http_port = None
+        self.http_path = None
 
     def child_init(self):
         ''' Called when the thread starts '''
-        pass
+
+        # TODO configs
+        self.http_host = '10.0.0.58'
+        self.http_port = 443
+        self.http_path = '/sip2-mediator'
+        self.session_key = uuid.uuid4().hex
+
+        if not SIPServerConnection.http_pool:
+
+            # TODO configs
+            SIPServerConnection.http_pool = urllib3.HTTPSConnectionPool(
+                self.http_host, 
+                port=self.http_port,
+                cert_reqs='CERT_NONE', 
+                assert_hostname=False
+            )
 
     def child_complete(self):
         ''' Called when the child is done reading messages '''
         pass
 
     def disconnect(self):
-        logging.debug('disconnecting client: ' + repr(self.address));
+        logging.debug('disconnecting client: ' + repr(self.sip_address));
 
         try:
-            self.client.close()
+            self.sip_client.close()
         except Exception as err:
             logging.warn(
                 "Error closing client socket for %s : %s" % (
-                    self.address, err
+                    self.sip_address, err
                 )
             )
 
-    def send_msg(self, msg):
+    def send_sip_msg(self, msg):
         ''' Sends a Message to the client '''
 
         msg_txt = str(msg)
         logging.debug('OUTBOUND: %s' % msg_txt)
-        self.client.send(bytes(msg_txt + LINE_TERMINATOR, TEXT_ENCODING))
+        self.sip_client.send(bytes(msg_txt + LINE_TERMINATOR, TEXT_ENCODING))
 
     def listen_loop(self):
         ''' Handle client requests. '''
@@ -117,12 +134,13 @@ class SIPServerConnection(object):
 
         self.child_complete()
 
-    def read_one_message(self):
+    def read_one_message(self) -> Message:
 
         msg_txt = ''
         while True:
 
-            buf = self.client.recv(SOCKET_BUFSIZE)
+            # TODO timeout / poll to check for global shutdown flag
+            buf = self.sip_client.recv(SOCKET_BUFSIZE)
 
             if buf is None or len(buf) == 0: # client disconnected
                 logging.info("Client connection severed.  Disconnecting");
@@ -141,12 +159,38 @@ class SIPServerConnection(object):
     def dispatch_message(self, msg):
         msg_code = msg.spec.code
 
-        resp = self.ils.handle_request(msg)
+        resp = self.http_request(msg)
+        resp_msg = Message.from_json(resp)
 
-        if resp is not None:
-            self.send_msg(resp)
+        if resp_msg is None:
+            logging.warn("No response received for message code: " + msg_code)
         else:
-            logging.warn("no handler defined for message type: " + msg_code)
+            self.send_sip_msg(resp_msg)
+
+    def http_request(self, msg) -> str:
+        ''' Returns the response message as a JSON string '''
+
+        post_params = urlencode(
+            {'session': self.session_key, 'message': msg.to_json()}) 
+
+        try:
+
+            response = SIPServerConnection.http_pool.urlopen(
+                'POST', self.http_path, body=post_params)
+
+        except Exception as e:
+            logging.error('HTTP request failed %s' % repr(e))
+            return None
+
+        logging.debug("ILS Mediator returned: %s" % response.data)
+
+        if response.status == 200:
+            return response.data
+        else:
+            logging.warn(
+                "ILS Mediator returned non-success status: %d" % response.status)
+            return None
+
             
 if __name__ == '__main__':
 
@@ -158,8 +202,5 @@ if __name__ == '__main__':
     host = server.get('host', '')
     port = server.get('port', 6001)
 
-    #ils = ILSMod()
-    ils = EvergreenMod()
-    ils.init()
-    SIPServer(host, int(port), ils).listen()
+    SIPServer(host, int(port)).listen()
 
