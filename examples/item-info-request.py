@@ -41,9 +41,6 @@ resp = client.item_info_request(copy_barcode)
 
 print("All Fields:\n" + repr(resp))
 
-# example of accessing a field's value by code
-print("title: %s\n" % resp.get_field_value('AJ'))
-
 client.disconnect()
 client.log_messages()
 

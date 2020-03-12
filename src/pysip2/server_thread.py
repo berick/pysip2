@@ -118,6 +118,7 @@ class ServerThread(object):
 
         if resp_msg is None:
             logging.warn("No response received for message code: " + msg_code)
+            self.disconnect()
         else:
             self.send_sip_msg(resp_msg)
 

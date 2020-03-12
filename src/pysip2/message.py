@@ -19,6 +19,11 @@ from pysip2.spec import FieldSpec as fspec
 from pysip2.spec import FixedFieldSpec as ffspec
 from pysip2.spec import STRING_COLUMN_PAD, SIP_DATETIME, LINE_TERMINATOR
 
+def stringify(value) -> str:
+    ''' Handle None and non-string values during stringification '''
+    if value is None: value = ''
+    return str(value)
+
 class Field(object):
     '''Models a single SIP2 message field'''
 
@@ -27,7 +32,7 @@ class Field(object):
         self.value = value
     
     def __str__(self):
-        return self.spec.code + (self.value or '') + '|'
+        return self.spec.code + (stringify(self.value)) + '|'
 
     def __repr__(self):
         spaces = STRING_COLUMN_PAD - len(self.spec.label) - 5
@@ -41,7 +46,7 @@ class FixedField(Field):
 
     def __repr__(self):
         spaces = STRING_COLUMN_PAD - len(self.spec.label)
-        return self.spec.label + ' '*spaces + ': ' + (self.value or '')
+        return self.spec.label + ' '*spaces + ': ' + (stringify(self.value))
 
 class Message(object):
     '''Models a complete SIP2 message.'''
@@ -66,7 +71,7 @@ class Message(object):
         }
 
         for ff in self.fixed_fields:
-            msg_struct['fixed_fields'].append(ff.value or '')
+            msg_struct['fixed_fields'].append(stringify(ff.value))
 
         for f in self.fields:
             msg_struct['fields'].append({f.spec.code: f.value})
