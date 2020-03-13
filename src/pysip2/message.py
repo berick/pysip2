@@ -21,8 +21,14 @@ from pysip2.spec import STRING_COLUMN_PAD, SIP_DATETIME, LINE_TERMINATOR
 
 def stringify(value) -> str:
     ''' Handle None and non-string values during stringification '''
-    if value is None: value = ''
-    return str(value)
+    if value is None: 
+        value = ''
+    elif type(value) != str: # eg 'int'
+        value = str(value)
+    else:
+        # '|' character is reserved for protocol use.
+        value = value.replace('|', ' ')
+    return value
 
 class Field(object):
     '''Models a single SIP2 message field'''

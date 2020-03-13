@@ -39,17 +39,17 @@ class ThreadedClient(threading.Thread):
         client.connect()
         client.login(username, password, location_code)
 
-        for i in range(10):
+        for i in range(50):
             resp = client.patron_info_request(self.barcode)
             time.sleep(.02)
 
         client.disconnect()
-        client.log_messages()
+        #client.log_messages()
 
 
 thread1 = ThreadedClient(sys.argv[1])
 thread2 = ThreadedClient(sys.argv[2])
 thread1.start()
-time.sleep(1) # give first login a chance to complete
+time.sleep(.2) # wait just a beat
 thread2.start()
 

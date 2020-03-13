@@ -37,9 +37,13 @@ client = pysip2.client.Client(server, int(port))
 client.default_institution = institution
 client.connect()
 client.login(username, password, location_code)
-resp = client.item_info_request(copy_barcode)
 
-print("All Fields:\n" + repr(resp))
+i = 0
+while i < 100:
+    i = i + 1
+    resp = client.item_info_request(copy_barcode)
+
+#print("All Fields:\n" + repr(resp))
 
 client.disconnect()
 client.log_messages()
