@@ -39,12 +39,16 @@ class ThreadedClient(threading.Thread):
         client.connect()
         client.login(username, password, location_code)
 
-        for i in range(50):
-            resp = client.patron_info_request(self.barcode)
-            time.sleep(.02)
+        for i in range(10):
+            try:
+                resp = client.patron_info_request(self.barcode)
+                #print('%s\n' % repr(resp))
+            except IOError as e:
+                logging.error("Disconnected from SIP server")
+                return;
 
         client.disconnect()
-        #client.log_messages()
+        client.log_messages()
 
 
 thread1 = ThreadedClient(sys.argv[1])

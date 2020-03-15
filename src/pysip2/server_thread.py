@@ -19,6 +19,8 @@ from gettext import gettext as _
 from pysip2.spec import TEXT_ENCODING, LINE_TERMINATOR, SOCKET_BUFSIZE
 from pysip2.message import Message, FixedField, Field
 
+MAX_THREADS=256 # TODO: config
+
 class ServerThread(object):
     ''' Models a single client connection to the SIPServer. '''
 
@@ -49,6 +51,10 @@ class ServerThread(object):
             ServerThread.http_pool = urllib3.HTTPSConnectionPool(
                 self.http_host, 
                 port=self.http_port,
+                maxsize=MAX_THREADS,
+                # Wait for connections to become available before sending
+                # new HTTP requests once we exceed MAX_THREADS
+                block=True
                 cert_reqs='CERT_NONE', 
                 assert_hostname=False
             )
