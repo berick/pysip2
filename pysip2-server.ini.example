@@ -1,6 +1,9 @@
 [server]
-host            = localhost
-port            = 6001
+sip_address     = 127.0.0.1
+sip_port        = 6001
+http_address    = 127.0.0.1
+http_port       = 443
+max_clients     = 150
 institution     = example
 
 [ssl]
@@ -28,4 +31,5 @@ formatter=simpleFormatter
 args=(sys.stdout,)
 
 [formatter_simpleFormatter]
-format=%(asctime)s %(levelname)s: %(message)s
+format=%(asctime)s %(thread)d %(levelname)s: %(message)s
+datefmt=%F %T

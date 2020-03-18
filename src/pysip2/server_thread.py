@@ -19,8 +19,6 @@ from gettext import gettext as _
 from pysip2.spec import TEXT_ENCODING, LINE_TERMINATOR, SOCKET_BUFSIZE
 from pysip2.message import Message, FixedField, Field
 
-MAX_THREADS=256 # TODO: config
-
 class ServerThread(object):
     ''' Models a single client connection to the SIPServer. '''
 
@@ -32,32 +30,30 @@ class ServerThread(object):
     def __init__(self, sip_client, sip_address):
         self.sip_client = sip_client
         self.sip_address = sip_address
-        self.http_host = None
-        self.http_port = None
         self.http_path = None
+
+    @staticmethod
+    def create_http_pool(max_size, http_host, http_port):
+
+        # Note max_size should match the max thread count configuration,
+        # so the connection pool, in theory, will never exceed the
+        # maxsize limit and force blocking.
+        ServerThread.http_pool = urllib3.HTTPSConnectionPool(
+            http_host, 
+            port=http_port,
+            maxsize=max_size,
+            block=True,
+            cert_reqs='CERT_NONE', 
+            assert_hostname=False
+        )
+
 
     def thread_init(self):
         ''' Called when the thread starts '''
 
         # TODO configs
-        self.http_host = '10.0.0.58'
-        self.http_port = 443
         self.http_path = '/sip2-mediator'
         self.session_key = uuid.uuid4().hex
-
-        if not ServerThread.http_pool:
-
-            # TODO configs
-            ServerThread.http_pool = urllib3.HTTPSConnectionPool(
-                self.http_host, 
-                port=self.http_port,
-                maxsize=MAX_THREADS,
-                # Wait for connections to become available before sending
-                # new HTTP requests once we exceed MAX_THREADS
-                block=True
-                cert_reqs='CERT_NONE', 
-                assert_hostname=False
-            )
 
     def thread_complete(self):
         ''' Called when the child is done reading messages '''
